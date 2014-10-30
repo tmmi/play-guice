@@ -1,8 +1,8 @@
 package controllers
 
 import play.api.mvc._
-import javax.inject.{Singleton, Inject}
-import services.TextGenerator
+import javax.inject.{Named, Qualifier, Singleton, Inject}
+import services.{TextGen, TextGenerator}
 
 /**
  * Instead of declaring an object of Application as per the template project, we must declare a class given that
@@ -10,10 +10,10 @@ import services.TextGenerator
  * @param textGenerator the text generator service we wish to receive.
  */
 @Singleton
-class Application @Inject() (textGenerator: TextGenerator) extends Controller {
+class Application @Inject() (@Named("all") textGenerator: TextGen) extends Controller {
   
   def index = Action {
-    Ok(views.html.index(textGenerator.welcomeText))
+    Ok(views.html.index(textGenerator.value))
   }
   
 }
