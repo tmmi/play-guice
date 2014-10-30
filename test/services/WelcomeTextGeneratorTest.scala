@@ -13,7 +13,7 @@ class WelcomeTextGeneratorTest extends Specification {
      "generate some text" in {
        val textGenerator = new WelcomeTextGenerator
 
-       textGenerator.welcomeText mustEqual("Your new application is ready.")
+       textGenerator.value mustEqual("Your new application is ready.")
      }
    }
  }

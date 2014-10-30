@@ -1,5 +1,5 @@
 import com.google.inject.name.Names
-import com.google.inject.{Guice, AbstractModule}
+import com.google.inject.{AbstractModule, Guice}
 import play.api.GlobalSettings
 import services._
 
@@ -13,10 +13,13 @@ object Global extends GlobalSettings {
    */
   val injector = Guice.createInjector(new AbstractModule {
     protected def configure() {
-      bind(classOf[TextGen]).annotatedWith(Names.named("welcome")).to(classOf[WelcomeTextGenerator])
-      bind(classOf[TextGen]).annotatedWith(Names.named("more")).to(classOf[MoreTextGenerator])
-      bind(classOf[TextGen]).annotatedWith(Names.named("all")).toProvider(classOf[GeneratorProvider])
-      bind(classOf[Conf]).to(classOf[ConfRandom])
+      bind(classOf[TextGen]).annotatedWith(Names.named("first")).to(classOf[FirstTextGenerator])
+      bind(classOf[TextGen]).annotatedWith(Names.named("second")).to(classOf[SecondTextGenerator])
+      bind(classOf[TextGen]).annotatedWith(Names.named("mix")).toProvider(classOf[GeneratorProvider])
+
+      val conf = new ConfMap(Map( "text.switch" -> 1))
+
+      bind(classOf[Conf]).toInstance(conf)
     }
   })
 

@@ -1,0 +1,52 @@
+
+
+    <div class="row" ng-controller="ConfigCtrl as cc">
+        &NonBreakingSpace;
+
+        <div class="row">
+            <div class="form-group">
+                <h3>
+                    Configs
+                    <a ng-click="cc.setConfig(searchText,'0');searchText=''" class="btn btn-primary pull-right" id="btn_user_create">Add key</a>
+                </h3>
+                <hr>
+            </div>
+            <div class="form-group">
+                <input class="form-control" type="text" ng-model="searchText" placeholder="Type here to filter config keys...">
+                <hr>
+            </div>
+
+
+            <table id="config_list" class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Value</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="c in cc.configs | filter:searchText">
+                    <td>
+                        {{ c.key }}
+                    </td>
+                    <td>
+                        <input type="number" pattern="[0-9]*" class="form-control-1" name="value" id="refund-receiver" placeholder="Enter value" ng-model="c.value" value="{{c.value}}" ng-change="$scope[c.key + '_edited'] = true" required />
+                        <a ng-show="$scope[c.key + '_edited']" class="btn btn-info btn-xs" href ng-click="cc.setConfig(c.key,c.value)">set</a>
+                        <a class="btn btn-info btn-xs" href ng-click="cc.removeConfig(c.key)">remove</a>
+                        <a ng-show="false" class="btn btn-info btn-xs" href ng-click="$scope[c.key + '_edited'] = true">enable</a>
+                    </td>
+                </tr>
+                <tr ng-hide="cc.configs.length">
+                    <td colspan="2">
+                        <p class="text-center">No Configs Found</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <hr>
+            <h4>Debug:</h4>
+            <pre>{{ cc.configs | json }}</pre>
+        </div>
+
+    </div>

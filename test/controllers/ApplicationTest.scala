@@ -5,7 +5,7 @@ import org.specs2.mutable._
 
 import play.api.test._
 import play.api.test.Helpers._
-import services.TextGenerator
+import services.{ConfRandom, TextGenerator}
 
 /**
  * We focus here on testing the controller only - not the infrastructure in front or behind it. Using dependency
@@ -20,13 +20,13 @@ class ApplicationTest extends Specification with Mockito {
     
     "invoke the text generator" in {
       val textGenerator = mock[TextGenerator]
-      val application = new controllers.Application(textGenerator)
+      val application = new controllers.Application(textGenerator,new ConfRandom)
 
-      textGenerator.welcomeText returns ""
+      textGenerator.value returns ""
 
       application.index(FakeRequest())
 
-      there was one(textGenerator).welcomeText
+      there was one(textGenerator).value
     }
   }
 }

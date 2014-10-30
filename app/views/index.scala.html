@@ -1,7 +1,13 @@
 @(message: String)
 
-@main("Welcome to Play 2.1") {
-    
-    @play20.welcome(message)
-    
+@main("Welcome to Play 2.3, Guice + CoffeeScript Template") {
+
+    <div>
+    Text from dynamic generator <br>
+        @message
+    </div>
+    <br>
+    <div>
+        Dynamic <a href='@routes.Application.admin'>configuration</a>
+    </div>
 }

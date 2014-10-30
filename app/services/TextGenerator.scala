@@ -1,7 +1,6 @@
 package services
 
 import javax.inject.Singleton
-import scala.util.Random
 
 /**
  * A type declaring the interface that will be injectable.
@@ -19,16 +18,16 @@ abstract class TextGenerator(val text: String) extends TextGen{
  * A simple implementation of TextGenerator that we will inject.
  */
 @Singleton
-class WelcomeTextGenerator extends TextGenerator("Your new application is ready.")
+class FirstTextGenerator extends TextGenerator("First welcome text generator.")
 
 @Singleton
-class MoreTextGenerator extends TextGenerator("More.")
+class SecondTextGenerator extends TextGenerator("Second text generator.")
 
 object Util {
-  import java.lang.reflect.{Method, InvocationHandler, Proxy}
+  import java.lang.reflect.{InvocationHandler, Method, Proxy}
 
   def createProxy[I](selectFunction: => Int , interfaceClass: Class[I], proxee: I *): I = {
-    //assert(interfaceClass.isInterface, "interfaceClass should be an inteface class")
+    assert(interfaceClass.isInterface, "interfaceClass should be an inteface class")
     Proxy.newProxyInstance(interfaceClass.getClassLoader, Array(interfaceClass), new InvocationHandler() {
       override def invoke(proxy: Object, method: Method, args: Array[Object]) = {
         val choose:Int = selectFunction
