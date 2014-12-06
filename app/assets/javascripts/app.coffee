@@ -17,6 +17,9 @@ angular.module('myApp.routeConfig', ['ngRoute'])
             .when('/', {
                 templateUrl: '/assets/partials/viewConfig.html'
             })
+            .when('/tasks', {
+            templateUrl: '/assets/partials/viewTask.html'
+            })
             .otherwise({redirectTo: '/'})
 
 @commonModule = angular.module('myApp.common', [])

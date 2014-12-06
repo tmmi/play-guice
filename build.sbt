@@ -12,6 +12,8 @@ scalaVersion := "2.11.1"
 resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
 libraryDependencies ++= Seq(
+  jdbc,
+  anorm,
 // Test dependencies
   "com.google.inject" % "guice" % "3.0",
     "javax.inject" % "javax.inject" % "1",

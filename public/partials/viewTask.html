@@ -1,0 +1,81 @@
+
+
+    <div id="tasks" class="row" ng-controller="TaskCtrl as tc"
+         ng-init="newWorkerId=1;newCheckEvery=2000;newProcessTime=1500;newTaskId=10" >
+        &NonBreakingSpace;
+
+        <div class="row">
+            <div class="form-group">
+                <h3>
+                    Tasks
+                </h3>
+                <hr>
+            </div>
+            <div class="form-group">
+                <input class="form-control" type="number" ng-model="newTaskId" placeholder="Type here task id">
+                <a ng-click="tc.addTask(newTaskId)" class="btn btn-primary pull-right" id="btn_task_create">Create task</a>
+                <hr>
+            </div>
+            <div class="form-group" >
+                <input class="form-control" type="number" ng-model="newWorkerId" placeholder="worker Id">
+                <input class="form-control" type="number" ng-model="newCheckEvery" placeholder="every ms">
+                <input class="form-control" type="number" ng-model="newProcessTime" placeholder="process ms">
+                <a ng-click="tc.startWorker(newWorkerId,newCheckEvery,newProcessTime)" class="btn btn-primary pull-right" id="btn_start_worker">Start worker</a>
+                &NonBreakingSpace;<a ng-click="tc.reset()" class="btn btn-primary pull-right" id="btn_task_reset">Reset retry</a>
+                <hr>
+            </div>
+
+
+            <table id="task_list" class="table table-striped">
+                <thead>
+                <tr>
+                    <th>TaskId</th>
+                    <th>Worker</th>
+                    <th>Status</th>
+                    <th>Retry</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="c in tc.tasks">
+                   <div id="{{ c.taskId }}">
+                    <td>
+                        {{ c.taskId }}
+                    </td>
+                       <td>
+                           {{ c.worker }}
+                       </td>
+                       <td>
+                           {{ c.status }}
+                       </td>
+                       <td>
+                           {{ c.retry }}
+                       </td>
+                    <!--
+                    <td>
+                        <input type="number" pattern="[0-9]*" class="form-control-1" name="value" id="refund-receiver" placeholder="Enter value" ng-model="c.value" value="{{c.value}}" ng-change="$scope[c.key + '_edited'] = true" required />
+                        <a ng-show="$scope[c.key + '_edited']" class="btn btn-info btn-xs" href ng-click="cc.setConfig(c.key,c.value)">set</a>
+                        <a class="btn btn-info btn-xs" href ng-click="cc.removeConfig(c.key)">remove</a>
+                        <a ng-show="false" class="btn btn-info btn-xs" href ng-click="$scope[c.key + '_edited'] = true">enable</a>
+                    </td>
+                    -->
+                   </div>
+                </tr>
+                <tr ng-hide="tc.tasks.length">
+                    <td colspan="4">
+                        <p class="text-center">No tasks</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <hr>
+            <h4>Debug:</h4>
+            <pre>{{ tc.tasks | json }}</pre>
+        </div>
+
+    </div>
+
+
+
+
+

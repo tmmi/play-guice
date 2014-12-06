@@ -1,0 +1,321 @@
+diff --git a/app/Global.scala b/app/Global.scala
+index d6878a3..2f719a5 100644
+--- a/app/Global.scala
++++ b/app/Global.scala
+@@ -1,12 +1,32 @@
+ import com.google.inject.name.Names
+ import com.google.inject.{Guice, AbstractModule}
+-import play.api.GlobalSettings
++import org.slf4j.{LoggerFactory, Logger}
++import play.api.db.DB
++import play.api.{Application, GlobalSettings}
+ import services._
+ 
+ /**
+  * Set up the Guice injector and provide the mechanism for return objects from the dependency graph.
+  */
+ object Global extends GlobalSettings {
++  private final val logger: Logger = LoggerFactory.getLogger(classOf[GlobalSettings])
++
++  override def onStart(app: Application): Unit = {
++    import anorm._
++    import play.api.Play.current
++    DB.withConnection { implicit c =>
++      try {
++        SQL(DBService.createSQL).execute()
++        for (v <- 1 to 20) {
++          SQL(DBService.insertSql(v, null, 0, 0)).execute()
++        }
++      } catch {
++        case e: Exception => logger.error("exception caught: " + e);
++      }
++    }
++
++
++  }
+ 
+   /**
+    * Bind types such that whenever TextGenerator is required, an instance of WelcomeTextGenerator will be used.
+@@ -16,6 +36,7 @@ object Global extends GlobalSettings {
+       bind(classOf[TextGen]).annotatedWith(Names.named("welcome")).to(classOf[WelcomeTextGenerator])
+       bind(classOf[TextGen]).annotatedWith(Names.named("more")).to(classOf[MoreTextGenerator])
+       bind(classOf[TextGen]).annotatedWith(Names.named("all")).toProvider(classOf[GeneratorProvider])
++      bind(classOf[DBService]).annotatedWith(Names.named("db")).toInstance(new DBService)
+       bind(classOf[Conf]).to(classOf[ConfRandom])
+     }
+   })
+diff --git a/app/controllers/Application.scala b/app/controllers/Application.scala
+index cb8c907..1eadab0 100644
+--- a/app/controllers/Application.scala
++++ b/app/controllers/Application.scala
+@@ -1,8 +1,17 @@
+ package controllers
+ 
++import java.util.concurrent.TimeUnit
++
++import akka.actor.{PoisonPill, Actor, Props}
++import play.api.libs.json.{JsPath, Reads, Json}
+ import play.api.mvc._
+ import javax.inject.{Named, Qualifier, Singleton, Inject}
+-import services.{TextGen, TextGenerator}
++import play.libs.Akka
++import services.{Task, DBService, TextGen, TextGenerator}
++import play.api.Play.current
++import scala.concurrent.ExecutionContext.Implicits.global
++
++import scala.concurrent.duration.Duration
+ 
+ /**
+  * Instead of declaring an object of Application as per the template project, we must declare a class given that
+@@ -10,10 +19,89 @@ import services.{TextGen, TextGenerator}
+  * @param textGenerator the text generator service we wish to receive.
+  */
+ @Singleton
+-class Application @Inject() (@Named("all") textGenerator: TextGen) extends Controller {
++class Application @Inject() (@Named("all") textGenerator: TextGen, dbService: DBService) extends Controller {
+   
+   def index = Action {
+     Ok(views.html.index(textGenerator.value))
+   }
+-  
++
++  case class Tick(workerId: Int)
++  case class Finish(workerId: Int,taskId: Long)
++
++  /*
++  class Parent extends Actor {
++    val c = context.actorOf(Props[Child], name = "child")
++    c ! "hello"
++    def receive = {
++      case x: String ⇒ println(self.path.name + " : " + x)
++    }
++  }
++
++  class Child extends Actor {
++    def receive = {
++      case x: String ⇒
++        println(self.path.name + " : " + x)
++        context.parent ! x.toUpperCase
++    }
++  }
++
++  val system = ActorSystem().actorOf(Props[Parent], name = "parent")
++   */
++
++  def tickProps(jobTime:Long) = Props(new Actor {
++    private var countNoJob = 0
++
++    def receive = {
++      case Tick(workerId) =>
++      {
++        println(workerId + " start")
++        val res = dbService.getNextToPerform(workerId)
++
++        res match {
++          case Left(id) => { println(workerId + " Id to process:" + id)
++            countNoJob = 0
++            Akka.system.scheduler.scheduleOnce(Duration(jobTime, TimeUnit.MILLISECONDS), self, Finish(workerId,id))
++          }
++          case Right(i) => {
++            println("No new: " + i)
++            countNoJob = countNoJob + 1
++            if(countNoJob>5) self ! PoisonPill
++          }
++        }
++      }
++      case Finish(workerId,id) => {
++        println(workerId + " finished " + id)
++        dbService.updateStatus(id,0)
++      }
++    }
++  })
++
++  def startWorker(workerId: Int, everyMillis: Long, processTime: Long) = Action {
++    import play.api.libs.concurrent.Execution.Implicits._
++    Akka.system.scheduler.schedule(Duration(500, TimeUnit.MILLISECONDS), Duration(everyMillis, TimeUnit.MILLISECONDS),
++      Akka.system.actorOf(tickProps(processTime),"worker"+ workerId), Tick(workerId))
++
++    Ok("started")
++  }
++
++
++  import play.api.libs.json.Json
++
++  // Generates Writes and Reads for
++  implicit val taskFormat = Json.format[Task]
++
++  def allTasks() = Action {
++    Ok(Json.toJson(dbService.getAllTasks))
++  }
++
++  def addTask(id: Long) = Action {
++    dbService.addTask(id)
++    Ok("ok "+ id)
++  }
++
++  def reset = Action {
++    dbService.resetRetry
++    Ok("Reseted")
++  }
++
+ }
+diff --git a/app/services/DBService.scala b/app/services/DBService.scala
+index 1009411..86d6291 100644
+--- a/app/services/DBService.scala
++++ b/app/services/DBService.scala
+@@ -1,5 +1,109 @@
+ package services
+ 
++import anorm.SqlParser._
++import anorm._
++import org.slf4j.{Logger, LoggerFactory}
++import play.api.db.DB
++
++
++case class Task(taskId:Long,worker:Long,status:Long,retry:Long)
++
+ class DBService {
++  import play.api.Play.current
++
++  private final val logger: Logger = LoggerFactory.getLogger(classOf[DBService])
++
++  def updateStatus(taskId:Long, status:Byte) = {
++    DB.withConnection { implicit c =>
++      SQL(DBService.updateSql(taskId, 0, status)).executeUpdate
++    }
++  }
++
++  def resetRetry = {
++    DB.withConnection { implicit c =>
++      SQL(DBService.resetRetry).executeUpdate
++    }
++  }
++
++  def addTask(taskId:Long) = {
++    DB.withConnection { implicit c =>
++      SQL(DBService.insertSql(taskId, "", 0, 0)).executeUpdate
++    }
++  }
++
++  def getAllTasks = {
++    DB.withConnection { implicit c =>
++      val sql: SqlQuery = SQL(DBService.selectAll)
++
++      sql.as(get[java.math.BigDecimal]("TASK_ID") ~ get[java.math.BigDecimal]("STATUS") ~ get[java.math.BigDecimal]("WORKER_ID") ~ get[java.math.BigDecimal]("RETRY") *).map {
++        case taskId ~ status ~ worker ~ retry => Task(taskId.longValue,worker.longValue, status.longValue, retry.longValue)
++      }
++    }
++  }
++
++  def getNextToPerform(worker: Int): Either[Long, Boolean] = {
++    DB.withConnection { implicit c =>
++      try {
++        val sql: SqlQuery = SQL(DBService.selectFirstId(5))
++
++        val ids = sql.map(row => row[BigDecimal]("task_Id")).list().map( _.longValue)
++
++        if (ids.length > 0) {
++          val id = ids(0)
++
++          if (SQL(DBService.updateSql(id, worker, 1)).executeUpdate() > 0) {
++            Left(id)
++          } else {
++            logger.error(s"$worker Already selected $id")
++            Right(false)
++          }
++        }
++        else {
++          logger.error(s"$worker Nothing to select")
++          Right(false)
++        }
++      } catch {
++        case e: Exception => {
++          logger.error(s"$worker exception caught: $e")
++          Right(true)
++        };
++      }
++    }
++  }
++}
++
++
++object DBService {
++  val createSQL = """
++          CREATE TABLE TASK_LIST
++          (
++           TASK_ID NUMBER,
++           INFOTXT VARCHAR2(256),
++           WORKER_ID NUMBER,
++           PROCESS_DATE DATE,
++           RETRY NUMBER,
++           CREATE_DATE DATE,
++           STATUS NUMBER,
++           REASON VARCHAR2(4000)
++          )
++                  """
++
++  def insertSql(taskId: Long, txt: String, workerId: Long, status: Byte) =
++    s"insert into TASK_LIST values ($taskId, '$txt', $workerId, null,0 , NOW(), $status, '')"
++
++  def updateSql(taskId: Long, workerId: Long, status: Byte) =
++   if(status == 0)
++    s"update TASK_LIST SET worker_Id=$workerId, status=$status, RETRY=RETRY+1, PROCESS_DATE=null where task_id=$taskId"
++   else
++    s"update TASK_LIST SET worker_Id=$workerId, status=$status, PROCESS_DATE=NOW() where task_id=$taskId"
++
++  def selectFirstId(limitRetry: Long = 5) =
++    s"select task_id from TASK_LIST where status=0 and RETRY<$limitRetry LIMIT 1"
++
++  def selectAll =
++    s"select * from TASK_LIST"
++
++  def resetRetry=
++    s"update TASK_LIST SET retry=0 where RETRY>0 and status=0"
+ 
+ }
+diff --git a/build.sbt b/build.sbt
+index ad8f1c9..3845e91 100644
+--- a/build.sbt
++++ b/build.sbt
+@@ -9,6 +9,8 @@ scalaVersion := "2.11.1"
+ resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+ 
+ libraryDependencies ++= Seq(
++  jdbc,
++  anorm,
+ // Test dependencies
+   "com.google.inject" % "guice" % "3.0",
+     "javax.inject" % "javax.inject" % "1",
+diff --git a/conf/application.conf b/conf/application.conf
+index b87c951..532c22f 100644
+--- a/conf/application.conf
++++ b/conf/application.conf
+@@ -33,8 +33,8 @@ application.langs="en"
+ # You can declare as many datasources as you want.
+ # By convention, the default datasource is named `default`
+ #
+-# db.default.driver=org.h2.Driver
+-# db.default.url="jdbc:h2:mem:play"
++db.default.driver=org.h2.Driver
++db.default.url="jdbc:h2:mem:play"
+ # db.default.user=sa
+ # db.default.password=""
+ 
+diff --git a/conf/routes b/conf/routes
+index 7829096..f5fd1ce 100644
+--- a/conf/routes
++++ b/conf/routes
+@@ -4,7 +4,11 @@
+ 
+ # Home page - we use the @controllers syntax here so that the router knows we are referring to a class. In turn it
+ # will call on the GlobalSettings.getController method to resolve the actual controller instance.
+-GET     /                           @controllers.Application.index
++GET        /                                 @controllers.Application.index
++GET        /start/:id/:every/:process        @controllers.Application.startWorker(id:Int,every:Long,process:Long)
++GET        /tasks                            @controllers.Application.allTasks
++GET        /add/:id                          @controllers.Application.addTask(id:Long)
++GET        /reset                    @controllers.Application.reset
+ 
+ # Map static resources from the /public folder to the /assets URL path
+-GET     /assets/*file               controllers.Assets.at(path="/public", file)
++GET        /assets/*file                     controllers.Assets.at(path="/public", file)

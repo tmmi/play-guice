@@ -4,15 +4,24 @@
 
 # Home page - we use the @controllers syntax here so that the router knows we are referring to a class. In turn it
 # will call on the GlobalSettings.getController method to resolve the actual controller instance.
-GET        /                       @controllers.Application.index
+GET        /                                 @controllers.Application.index
 GET        /admin                  @controllers.Application.admin
 
+#Config
 GET        /list                   @controllers.Application.listAll
 GET        /set/:key/:value        @controllers.Application.set(key: String, value:Int)
 GET        /remove/:key            @controllers.Application.remove(key: String)
 
+#Tasks
+GET        /tasks                       @controllers.TaskController.tasks
+GET        /start/:id/:every/:process        @controllers.TaskController.startWorker(id:Int,every:Long,process:Long)
+GET        /tasks.json                       @controllers.TaskController.allTasks
+GET        /add/:id                          @controllers.TaskController.addTask(id:Long)
+GET        /reset                    @controllers.TaskController.reset
+GET        /tasks/notifications        @controllers.TaskController.taskNotifications
 
 # Map static resources from the /public folder to the /assets URL path
+GET        /assets/*file                     controllers.Assets.at(path="/public", file)
 GET        /assets/*file           controllers.Assets.at(path="/public", file)
 
 # Enable webjar based resources to be returned
