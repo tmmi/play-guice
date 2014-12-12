@@ -8,6 +8,7 @@
     <link rel="stylesheet" media='screen' href='@routes.Assets.at("stylesheets/main.css")'>
 </head>
 <body>
+
 <div class="container-fluid col-md-10 col-md-offset-1">
     <!-- Fixed navbar -->
     <header>
@@ -22,6 +23,7 @@
                 <a class="navbar-brand" href="#/">Modern Web Template</a>
                 <a class="navbar-brand" href="/">Test Page</a>
             </div>
+            <server-error></server-error>
         </div>
     </header>
 
@@ -48,6 +50,8 @@
 <script src='@routes.Assets.at("javascripts/app.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/common/Config.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/directives/AppVersion.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/directives/ServerError.js")' type="text/javascript"></script>
+<script src='@routes.Assets.at("javascripts/interceptors/MainInterceptors.js")' type="text/javascript"></script>
 
 <script src='@routes.Assets.at("javascripts/task/TaskService.js")' type="text/javascript"></script>
 <script src='@routes.Assets.at("javascripts/task/TaskCtrl.js")' type="text/javascript"></script>

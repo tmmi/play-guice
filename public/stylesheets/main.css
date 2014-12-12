@@ -5,3 +5,22 @@ body {
     padding-bottom: 30px;
     min-width: 970px;
 }
+
+generic-error-container {
+    height: 60px;
+    position: fixed;
+    top: 70px;
+    width: 100%;
+    z-index: 10;
+}
+.error-message {
+    position: relative;
+    text-align: center;
+    top: 50%;
+    transform: translate(0px, +10%);
+}
+.glyphicon-remove {
+    cursor: pointer;
+    float: right;
+    right: 120px;
+}

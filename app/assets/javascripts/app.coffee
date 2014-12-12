@@ -5,6 +5,7 @@ dependencies = [
     'myApp.services',
     'myApp.controllers',
     'myApp.directives',
+    'myApp.interceptors',
     'myApp.common',
     'myApp.routeConfig'
 ]
@@ -28,3 +29,4 @@ angular.module('myApp.routeConfig', ['ngRoute'])
 @modelsModule = angular.module('myApp.models', [])
 @directivesModule = angular.module('myApp.directives', [])
 @filtersModule = angular.module('myApp.filters', [])
+@interceptorsModule = angular.module('myApp.interceptors', [])

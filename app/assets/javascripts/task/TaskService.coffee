@@ -16,10 +16,6 @@ class TaskService
       @$log.info("Successfully listed tasks - status #{status}")
       deferred.resolve(data)
     )
-    .error((data, status, headers) =>
-      @$log.error("Failed to list tasks - status #{status}")
-      deferred.reject(data);
-    )
     deferred.promise
 
   reset: () ->
@@ -31,24 +27,15 @@ class TaskService
         @$log.info("Successfully reset #{status}")
         deferred.resolve(data)
       )
-    .error((data, status, headers) =>
-        @$log.error("Failed to reset - status #{status}")
-        deferred.reject(data);
-      )
     deferred.promise
 
   startWorker: (worker, every, processTime) ->
     @$log.debug "start #{worker}"
     deferred = @$q.defer()
-
     @$http.get("/start/#{worker}/#{every}/#{processTime}")
     .success((data, status, headers) =>
       @$log.info("Successfully start - status #{status}")
       deferred.resolve(data)
-    )
-    .error((data, status, headers) =>
-      @$log.error("Failed to start - status #{status}")
-      deferred.reject(data);
     )
     deferred.promise
 
@@ -60,10 +47,6 @@ class TaskService
     .success((data, status, headers) =>
       @$log.info("Successfully add task - status #{status}")
       deferred.resolve(data)
-    )
-    .error((data, status, headers) =>
-      @$log.error("Failed to add task - status #{status}")
-      deferred.reject(data);
     )
     deferred.promise
 

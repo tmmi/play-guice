@@ -86,7 +86,7 @@ object DBService {
   val createSQL = s"""
           CREATE TABLE $tableName
           (
-           TASK_ID NUMBER,
+           TASK_ID NUMBER PRIMARY KEY,
            TYPE VARCHAR2(10) DEFAULT 'any' ,
            PRIORITY NUMBER DEFAULT 0,
            INFOTXT VARCHAR2(256),
